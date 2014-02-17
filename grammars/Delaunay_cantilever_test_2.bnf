@@ -1,0 +1,30 @@
+#delaunay.bnf - an automatic delaunay truss generator
+#Michael Fenton <michaelfenton1@gmail.com>
+
+<S> ::= <program>{}<call>
+<program> ::= def mutant():{<init>{}<constants>{}<get_node>{}<cross_brace>{}<get_genome>{}<make_truss>{}<make_all>{}<return>{}}
+<init> ::= truss_graph = graph.graph(){}state = random.getstate(){}
+<constants> ::= span = <span>{}depth = <depth>{}edge_list = []{}truss_graph.save_graph_info(["delaunay", span, depth]){}
+
+<get_node> ::= def get_node(node):{if node[1] == 0:{x = 0}else:{x = round(span/100 * node[1])}if node[2] == 0:{y = 0}else:{y = round(depth/100 * node[2])}return [node[0], x, y, node[3]]}
+
+<cross_brace> ::= def cross_brace():{top_ids = []{}bottom_ids = []{}top_list = [[0,<span>, depth, "fixed"]]{}bottom_list = [[0, 0, 0, "load"],[0, <half_span>, 0, "load"],[0, <span>, 0, "fixed"]]{}"""Delaunay"""{}set_a = [<node_iter>]{}set_b = []{}for node in top_list:{if node not in set_b:{set_b.append(node)}}{}for node in bottom_list:{if node not in set_b:{set_b.append(node)}}for node in set_a:{brogue = get_node(node){}set_b.append(brogue)}{}a_set = []{}b_set = []{}for point in set_b:{node = [point[1], point[2], point[0]]{}label = point[3]{}item = [node, label]{}if a_set:{if item not in a_set:{if item[0] not in b_set:{a_set.append(item){}b_set.append(item[0])}else:{break}}}else:{a_set.append(item){}b_set.append(item[0])}}a = []{}b = []{}oppo = []{}for node in a_set:{node_id = truss_graph.add_unique_node(node[0], str(node[1])){}a.append(node[0][0]){}b.append(node[0][1]){}if str(node[1]) == "bottom":{oppo.append(node[0])}}oppo.sort(key=itemgetter(1)){}cens,edg,tri,neig = triang.delaunay(a,b){}for i, triangle in enumerate(tri):{if len(triangle) == 3:{one = [triangle[0], triangle[1]]{}two = [triangle[1], triangle[2]]{}three = [triangle[0], triangle[2]]{}many = [one, two, three]{}for blah in many:{blah.sort{}if blah not in edge_list:{if (a_set[blah[0]][1] == "fixed" and a_set[blah[1]][1] == "bottom"):{if a_set[blah[1]][0][2] == oppo[-1][2]:{edge_list.append(blah)}}elif (a_set[blah[1]][1] == "fixed" and a_set[blah[0]][1] == "bottom"):{if a_set[blah[0]][0][2] == oppo[-1][2]:{edge_list.append(blah)}}elif (a_set[blah[0]][1] == "bottom" and a_set[blah[1]][1] == "bottom"):{for i, a in enumerate(oppo):{if i+1 < len(oppo):{if a_set[blah[0]][0] == a and a_set[blah[1]][0] == oppo[i+1]:{edge_list.append(blah)}if a_set[blah[1]][0] == a and a_set[blah[0]][0] == oppo[i+1]:{edge_list.append(blah)}}}}else:{edge_list.append(blah)}}}}}}
+
+<get_genome> ::= def get_genome(i):{return genome[i]}
+<make_truss> ::= def make_truss():{for i, edge in enumerate(edge_list):{truss_graph.add_edge(edge[0], edge[1], material=get_genome(i), genome_id=i)}}
+
+<node> ::= [0, <%>, <y>]
+<y> ::= float("<n><n>.<n><n>"), "node"
+<%> ::= float("<n><n>.<n><n>")
+<n> ::= 0|1|2|3|4|5|6|7|8|9
+
+
+<span> ::= 18288
+<half_span> ::= <span>/2
+<depth> ::= 9144
+
+<node_iter> ::= <node> | <node>,<node_iter>
+
+<make_all> ::= cross_brace(){}make_truss(){}truss_graph.replace_graph(truss_graph){}random.setstate(state){}
+<return> ::= return [truss_graph, len(edge_list), False, "cant", genome[:len(edge_list)]]{}
+<call> ::= XXXeval_or_exec_outputXXX = mutant()

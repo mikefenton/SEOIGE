@@ -1,0 +1,43 @@
+#trusses.bnf - an automatic truss generator
+#Michael Fenton <michaelfenton1@gmail.com>
+
+<S> ::= <program>{}<call>
+<program> ::= def mutant():{<init>{}<constants>{}<define_funcs>{}<make_all>{}<return>{}}
+
+<init> ::= truss_graph = graph.graph(){}bottom_ids = []{}top_list = []{}all_brace_ids = []{}current_ids = []{}
+
+<constants> ::= span = <span>{}half_span = span{}float_span = float(half_span){}depth = <depth>{}float_depth = float(depth){}r = <r>{}def check(n):{if n%2==0:{return "even"}else:{return "odd"}}number = check(r){}truss_graph.save_graph_info(["truss", span, depth]){}
+
+<define_funcs> ::= <bottom>{}<top>{}<cross_brace>{}<make_section>{}
+   
+<bottom> ::= def bottom(r, t):{pt_a, pt_b = [0, 0, 0], [0, half_span/r, 0]{}retval = (lambda t: interpolate(t, (pt_a, pt_b)))(t){}return retval}
+
+<top> ::= def top(r, t):{the_list = []{}for i in range (r+1):{bay_span = (i)*half_span/(r){}pt_a, pt_b = [0,bay_span,depth], [0,bay_span,depth]{}retval = (lambda t: interpolate(t, (pt_a, pt_b)))(t){}the_list.append(retval)}return the_list}
+
+<cross_brace> ::= def cross_brace(r, bottom_list,base_id, t, edge_list):{top_ids = []{}bottom_ids = []{}top_list = top(r, t){}if bottom(r, t) not in bottom_list:{bottom_list.append(bottom(r, t))}for i, xyz in enumerate(top_list):{for a, zyx in enumerate(bottom_list):{if i == a:{if i == 0:{new_top_id = truss_graph.add_unique_node(xyz, 'top')}if i == r:{new_top_id = truss_graph.add_unique_node(xyz, 'top')}if i != 0 and i != r:{new_top_id = truss_graph.add_unique_node(xyz, 'top')}if a == r:{new_bottom_id = truss_graph.add_unique_node(zyx, 'base')}elif a != r:{new_bottom_id = truss_graph.add_unique_node(zyx, 'bottom')}if xyz not in top_ids:{top_ids.append(new_top_id)}if zyx not in bottom_ids:{bottom_ids.append(new_bottom_id)}}}}if len(top_ids) > r:{for i, ind in enumerate(top_ids):{if i != (r):{pair = [top_ids[i], top_ids[i+1]]{}if pair not in edge_list and i != (r-1):{edge_list.append(pair)}}}for i, ind in enumerate(bottom_ids):{if i != (r):{pair = [bottom_ids[i], bottom_ids[i+1]]{}if pair not in edge_list:{edge_list.append(pair)}}}}<connection_type>{}edge_list.sort(){}for i, edge in enumerate(edge_list):{truss_graph.add_edge(edge[0], edge[1], material=genome[i])}current_ids.append(top_ids){}current_ids.append(bottom_ids){}return [current_ids, edge_list]}
+
+<connection_type> ::= <fully_braced>|<howe>
+#|<vierendeel><modified_warren> <warren>||<pratt>
+
+<make_section> ::= def make_section(r):{brace_ids = []{}bottom_list = []{}edge_list = []{}for i in range(r+1):{if i != r:{node_id = truss_graph.add_unique_node(bottom(r, i), 'load')}elif i == r:{node_id = truss_graph.add_unique_node(bottom(r, i), 'load')}bottom_ids.append(node_id){}{}result = cross_brace(r, bottom_list, node_id, i, edge_list){}brace_ids.extend(result[0]){}edge_list = result[1]}return edge_list}
+
+<pratt> ::= """Pratt"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i != 0:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<howe> ::= """Howe"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i+1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i and a != 0 and a != r:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<fully_braced> ::= """Fully Braced"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i+1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i != 0:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<warren> ::= """Warren"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if number == "odd":{for x in range(0, r, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if i == a+1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i == (r):{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}else:{for x in range(0, r+1, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if i == a+1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i == r:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}}
+
+<modified_warren> ::= """Modified Warren"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if number == "odd":{for x in range(0, r, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i != 0:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}else:{for x in range(0, r+1, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i != 0:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}}
+
+<vierendeel> ::= """Vierendeel"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i != 0:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<span> ::= 18288
+<depth> ::= 9144
+<r> ::= 2
+#|4|6|8|10
+
+<make_all> ::= edge_list = make_section(r){}truss_graph.sort_cant_support_nodes(truss_graph, span, depth){}truss_graph.replace_graph(truss_graph){}
+<return> ::= return [truss_graph, len(edge_list), False, False, "cant"]{}
+<call> ::= XXXeval_or_exec_outputXXX = mutant()

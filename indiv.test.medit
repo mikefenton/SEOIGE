@@ -1,0 +1,18 @@
+#  File created with Medit 3.0a
+#  Release Nov. 30, 2007
+# Created: Thu Sep  1 14:37:07 2011
+
+#  Assign background color
+BackgroundColor
+0.000000 0.000000 0.000000
+
+#  Window Size
+WindowSize
+600 600
+# Color palette
+Palette
+0.000000 0.000000 0.000000 0.000000 0.000000 
+
+# Subdomains colors
+NbMaterials
+0

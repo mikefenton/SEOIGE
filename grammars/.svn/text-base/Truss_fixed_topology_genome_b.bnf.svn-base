@@ -1,0 +1,37 @@
+#trusses.bnf - an automatic truss generator
+#Michael Fenton <michaelfenton1@gmail.com>
+
+<S> ::= <program>{}<call>
+<program> ::= def mutant():{<init>{}<constants>{}<truss_types>{}<define_funcs>{}<make_all>{}<return>{}}
+
+<init> ::= truss_graph = graph.graph(){}bottom_ids = []{}top_list = []{}all_brace_ids = []{}current_ids = []{}
+<constants> ::= span = <span>{}half_span = span/2{}float_span = float(half_span){}depth = <depth>{}float_depth = float(depth){}r = <r>{}def check(n):{if n%2==0:{return "even"}else:{return "odd"}}number = check(r){}
+
+<truss_types> ::= truss_graph.save_graph_info(["truss", span]){}
+<define_funcs> ::= <slope>{}<bottom>{}<top>{}<cross_brace>{}<make_section>{}
+
+<slope> ::= def slope(current_span):{angle = float_depth/float_span{}slope_radians = atan(angle){}sloped_depth = tan(slope_radians)*current_span{}return sloped_depth}
+    
+<bottom> ::= def bottom(r, t):{pt_a, pt_b = [0, 0, 0], [0, half_span/r, 0]{}retval = (lambda t: interpolate(t, (pt_a, pt_b)))(t){}return retval}
+
+<top> ::= def top(r, t):{the_list = []{}if pitch:{for i in range (r+1):{bay_span = (i)*half_span/r{}effective_depth = depth - slope((i)*half_span/r){}pt_a, pt_b = [0,bay_span,effective_depth], [0,bay_span,effective_depth]{}retval = (lambda t: interpolate(t, (pt_a, pt_b)))(t){}the_list.append(retval)}}return the_list}
+
+<cross_brace> ::= def cross_brace(r, bottom_list,base_id, t):{top_ids = []{}bottom_ids = []{}edge_list = []{}top_list = top(r, t){}if bottom(r, t) not in bottom_list:{bottom_list.append(bottom(r, t))}for i, xyz in enumerate(top_list):{for a, zyx in enumerate(bottom_list):{if i == a:{if i == 0:{new_top_id = truss_graph.add_unique_node(xyz, 'load')}if i == r:{new_top_id = truss_graph.add_unique_node(xyz, 'corner')}if i != 0 and i != r:{new_top_id = truss_graph.add_unique_node(xyz, 'top')}if a == r:{new_bottom_id = truss_graph.add_unique_node(zyx, 'base')}elif a != r:{new_bottom_id = truss_graph.add_unique_node(zyx, 'bottom')}if xyz not in top_ids:{top_ids.append(new_top_id)}if zyx not in bottom_ids:{bottom_ids.append(new_bottom_id)}}}}truss_graph.connect_nodes(top_ids, <material>){}truss_graph.connect_nodes(bottom_ids, <material>){}<vierendeel>{}current_ids.append(top_ids){}current_ids.append(bottom_ids){}return [current_ids, edge_list]}
+
+<make_section> ::= def make_section(r):{brace_ids = []{}bottom_list = []{}for i in range(r+1):{if i != r:{node_id = truss_graph.add_unique_node(bottom(r, i), 'bottom')}elif i == r:{node_id = truss_graph.add_unique_node(bottom(r, i), 'base')}bottom_ids.append(node_id){}brace_ids.extend(cross_brace(r, bottom_list, node_id, i))}}
+
+<pratt> ::= """Pratt"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i-1:{size = genome[i]{}truss_graph.add_edge(zyx, xyz, material=size){}pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i:{size = genome[r+i]{}truss_graph.add_edge(zyx, xyz, material=size){}pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<howe> ::= """Howe"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i+1:{size = genome[i]{}truss_graph.add_edge(zyx, xyz, material=size){}pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i:{size = genome[r+i]{}truss_graph.add_edge(zyx, xyz, material=size){}pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<vierendeel> ::= """Vierendeel"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a ==i:{size = genome[i]{}truss_graph.add_edge(zyx, xyz, material=size){}pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<material> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99 | 100 | 101 | 102 | 103 | 104 | 105 | 106 | 107 | 108 | 109 | 110 | 111 | 112 | 113 | 114 | 115 | 116 | 117 | 118 | 119 | 120 | 121 | 122 | 123 | 124 | 125 | 126 | 127 | 128 | 129 | 130 | 131 | 132 | 133 | 134 | 135 | 136 | 137 | 138 | 139 | 140 | 141 | 142 | 143 | 144 | 145 | 146 | 147 | 148 | 149 | 150 | 151 | 152 | 153 | 154 | 155 | 156
+<r> ::= 9
+<span> ::= 20000
+<depth> ::= <span>/10
+
+<make_all> ::= make_section(r){}mirror_graph = truss_graph.copy_and_offset_with_mirror(truss_graph, [0, 0, 0], True){}truss_graph.replace_graph(mirror_graph){}
+
+<return> ::= return truss_graph{}
+<call> ::= XXXeval_or_exec_outputXXX = mutant()

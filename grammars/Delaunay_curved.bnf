@@ -1,0 +1,49 @@
+#delaunay_test.bnf - an automatic delaunay curved truss generator
+#Michael Fenton <michaelfenton1@gmail.com>
+
+<S> ::= <program>{}<call>
+<program> ::= def mutant():{<set_mesh_resolution>{}<init>{}<constants>{}<get_y>{}<cross_brace>{}<get_genome>{}<make_truss>{}<make_all>{}<return>{}}
+<init> ::= truss_graph = graph.graph(){}state = random.getstate(){}resolution = set_mesh_resolution(){}
+<constants> ::= span = <span>{}depth = <depth>{}edge_list = []{}truss_graph.save_graph_info(["delaunay", span, depth]){}#    Circle:     (x-h)2 + y-k)2 = r2{}#                y = k + int(sqrt((span/2)**2 - (x-h)**2)){}#    Ellipse:    (((x-h)2)/a2) + (((y-k)2)/b2) = 1{}#                y = k + int(sqrt((1-(((x-h)**2)/(span/2)**2))((span/4)**2))){}
+
+<cross_brace> ::= def cross_brace():{top_ids = []{}bottom_ids = []{}resolution = set_mesh_resolution(){}input_1 = 0{}input_2 = span/4{}rise = <rise>{}ans = <circle_or_ellipse>{}people = ((rise)**2)*(1-(((float(input_2))**2)/((span/2)**2))){}if people >= 0:{ars = [int(sqrt(people)), "ellipse", rise]}else:{ars = [int(sqrt(abs(people))), "ellipse", rise]}max_depth = depth + ans[0]{}min_depth = ans[0]{}mid_depth = ars[0]{}max_mid_depth = ars[0] + depth{}top_list = [[0, None, 0, None, max_depth, "load"], [0, None, <quarter_span>, None, max_mid_depth, "load"]]{}bottom_list = [[0, None, -<quarter_span>, None, mid_depth, "fixed"], [0, None, <half_span>, None, 0, "fixed"]]{}"""Delaunay"""{}set_a = [<node_iter>]{}set_b = []{}for node in top_list:{if node not in set_b:{set_b.append(node)}}{}for node in bottom_list:{if node not in set_b:{set_b.append(node)}}for node in set_a:{b = get_y(node[3],node[1],node[2], ans[1], ans[2]){}arse = [0,node[0],node[1],b[0], b[1], b[2]]{}set_b.append(arse)}{}a_set = []{}b_set = []{}for point in set_b:{node = [point[0], point[2], point[4]]{}label = point[5]{}item = [node, label]{}if a_set:{if item not in a_set:{if item[0] not in b_set:{a_set.append(item){}b_set.append(item[0])}else:{break}}}else:{a_set.append(item){}b_set.append(item[0])}}a = []{}b = []{}oppo = []{}bloppo = []{}for node in a_set:{node_id = truss_graph.add_unique_node(node[0], str(node[1])){}a.append(node[0][1]){}b.append(node[0][2]){}if str(node[1]) == "bottom" and node[0][1] > 0:{oppo.append(node[0])}elif str(node[1]) == "bottom" and node[0][1] < 0:{bloppo.append(node[0])}}oppo.sort(key=itemgetter(1)){}bloppo.sort(key=itemgetter(1)){}cens,edg,tri,neig = triang.delaunay(a,b){}for i, triangle in enumerate(tri):{if len(triangle) == 3:{one = [triangle[0], triangle[1]]{}two = [triangle[1], triangle[2]]{}three = [triangle[0], triangle[2]]{}many = [one, two, three]{}for blah in many:{blah.sort{}if blah not in edge_list:{if (a_set[blah[0]][1] == "fixed" and a_set[blah[1]][1] == "lower_centre"):{if len(oppo) == len(bloppo) == 0:{edge_list.append(blah)}elif len(oppo) == 0 and len(bloppo) != 0:{if a_set[blah[0]][0][1] > 0:{edge_list.append(blah)}}elif len(oppo) != 0 and len(bloppo) == 0:{if float(a_set[blah[0]][0][1]) < 0:{edge_list.append(blah)}}else:{pass}}elif (a_set[blah[0]][1] == "lower_centre" and a_set[blah[1]][1] == "fixed"):{if len(oppo) == len(bloppo) == 0:{edge_list.append(blah)}elif len(oppo) == 0 and len(bloppo) != 0:{if a_set[blah[1]][0][1] > 0:{edge_list.append(blah)}}elif len(oppo) != 0 and len(bloppo) == 0:{if float(a_set[blah[1]][0][1]) < 0:{edge_list.append(blah)}}else:{pass}}elif (a_set[blah[0]][1] == "fixed" and a_set[blah[1]][1] == "fixed"):{pass}elif (a_set[blah[0]][1] == "fixed" and a_set[blah[1]][1] == "bottom"):{if a_set[blah[1]][0][1] > 0 and a_set[blah[0]][0][1] > 0:{if a_set[blah[1]][0] == oppo[-1]:{edge_list.append(blah)}}elif a_set[blah[1]][0][1] < 0 and a_set[blah[0]][0][1] < 0:{if a_set[blah[1]][0] == bloppo[0]:{edge_list.append(blah)}}}elif (a_set[blah[1]][1] == "fixed" and a_set[blah[0]][1] == "bottom"):{if a_set[blah[1]][0][1] > 0 and a_set[blah[0]][0][1] > 0:{if a_set[blah[0]][0] == oppo[-1]:{edge_list.append(blah)}}elif a_set[blah[1]][0][1] < 0 and a_set[blah[0]][0][1] < 0:{if a_set[blah[0]][0] == bloppo[0]:{edge_list.append(blah)}}}elif (a_set[blah[0]][1] == "bottom" and a_set[blah[1]][1] == "lower_centre"):{if a_set[blah[0]][0][1] > 0:{if a_set[blah[0]][0] == oppo[0]:{edge_list.append(blah)}}else:{if a_set[blah[0]][0] == bloppo[-1]:{edge_list.append(blah)}}}elif (a_set[blah[1]][1] == "bottom" and a_set[blah[0]][1] == "lower_centre"):{if a_set[blah[1]][0][1] > 0:{if a_set[blah[1]][0] == oppo[0]:{edge_list.append(blah)}}else:{if a_set[blah[1]][0] == bloppo[-1]:{edge_list.append(blah)}}}elif (a_set[blah[0]][1] == "bottom" and a_set[blah[1]][1] == "bottom"):{if a_set[blah[1]][0][1] > 0:{for i, a in enumerate(oppo):{if i+1 < len(oppo):{if a_set[blah[0]][0] == a and a_set[blah[1]][0] == oppo[i+1]:{edge_list.append(blah)}if a_set[blah[1]][0] == a and a_set[blah[0]][0] == oppo[i+1]:{edge_list.append(blah)}}}}else:{for i, a in enumerate(bloppo):{if i+1 < len(bloppo):{if a_set[blah[0]][0] == a and a_set[blah[1]][0] == bloppo[i+1]:{edge_list.append(blah)}if a_set[blah[1]][0] == a and a_set[blah[0]][0] == bloppo[i+1]:{edge_list.append(blah)}}}}}else:{edge_list.append(blah)}}}}}}
+
+<get_genome> ::= def get_genome(i):{return genome[i % len(genome)]}
+<make_truss> ::= def make_truss():{target = len(edge_list){}for i, edge in enumerate(edge_list):{truss_graph.add_edge(edge[0], edge[1], material=get_genome(i))}}
+<set_mesh_resolution> ::= def set_mesh_resolution():{if ave[-1] > 1000000000:{resolution = 100}else:{resolution = 10}return resolution}
+
+<n> ::= 0|1|2|3|4|5|6|7|8|9
+<nn> ::= 1|2|3|4|5|6|7|8|9
+
+<circ_pair> ::= <fix_x>, [sqrt((<half_span>)**2 - (<fix_x>[1])**2), "node"]
+<fix_x> ::= <set_x>
+
+<get_y> ::= def get_y(input_0, input_1, input_2, input_3, input_4):{random.seed(input_0){}truss_type = input_3{}rise = input_4{}if truss_type == "circle":{ans = int(sqrt((span/2)**2 - (input_1)**2))}elif truss_type == "ellipse":{ans = int(sqrt(((rise)**2)*(1-(((float(input_1))**2)/((span/2)**2)))))}max_depth = depth + ans{}min_depth = ans{}if input_2 == "upper_bound":{return None, max_depth, "top"}elif input_2 == "lower_bound":{return None, min_depth, "bottom"}else:{return None, random.randrange(min_depth,max_depth, resolution), "interior"}}
+
+<choose_y> ::= "upper_bound" | "lower_bound" | "interior"
+<set_x> ::= [<set_rand>, <rand_x>, <choose_y>, <test_2>]
+<rand_y> ::= random.randrange(min_depth,max_depth, resolution)
+<rand_x> ::= <half_span>-random.randrange(0,<half_span>, resolution) | 0-random.randrange(0,<quarter_span>, resolution) 
+<set_rand> ::= random.seed(int("<n><n><n>"))
+
+<circle_or_ellipse> ::=  [int(sqrt(((rise)**2)*(1-(((float(input_1))**2)/((span/2)**2))))), "ellipse", rise]
+#[int(sqrt((span/2)**2 - (input_1)**2)), "circle", None] |
+<test> ::= int("<n><n><n>")
+<test_2> ::= <test>
+
+<rise> ::= span/3
+# | span/<nn><n> | 0
+<span> ::= 30000
+<half_span> ::= <span>/2
+<quarter_span> ::= <span>/4
+<depth> ::= <span>/5
+
+<node_iter> ::= <node>,<node> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> |<node>,<node>,<node_iter>
+
+<node> ::= <set_x>
+#,[<rand_y>, "node"] | (<circ_pair>)[2]
+
+<make_all> ::= cross_brace(){}make_truss(){}truss_graph.replace_graph(truss_graph){}random.setstate(state){}
+
+<return> ::= return [truss_graph, len(edge_list), False, "truss"]{}
+<call> ::= XXXeval_or_exec_outputXXX = mutant()

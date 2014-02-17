@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/Mike/!svn/ver/73/truss/grammars
+END
+Truss_fixed_topology.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/Mike/!svn/ver/95/truss/grammars/Truss_fixed_topology.bnf
+END
+Truss_cantilever_test.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/Mike/!svn/ver/110/truss/grammars/Truss_cantilever_test.bnf
+END
+Truss_cantilever.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/Mike/!svn/ver/110/truss/grammars/Truss_cantilever.bnf
+END
+Truss_cantilever_test2.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/Mike/!svn/ver/110/truss/grammars/Truss_cantilever_test2.bnf
+END
+Delaunay_cantilever.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/Mike/!svn/ver/102/truss/grammars/Delaunay_cantilever.bnf
+END
+Truss_no_sizing.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/Mike/!svn/ver/95/truss/grammars/Truss_no_sizing.bnf
+END
+Truss.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/Mike/!svn/ver/110/truss/grammars/Truss.bnf
+END
+Delaunay_no_sizing.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/Mike/!svn/ver/95/truss/grammars/Delaunay_no_sizing.bnf
+END
+Delaunay.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/Mike/!svn/ver/102/truss/grammars/Delaunay.bnf
+END
+Truss_fixed_topology_genome_a.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/Mike/!svn/ver/99/truss/grammars/Truss_fixed_topology_genome_a.bnf
+END
+Truss_fixed_topology_genome_b.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/Mike/!svn/ver/99/truss/grammars/Truss_fixed_topology_genome_b.bnf
+END
+Delaunay_fixed_topology_genome_a.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/Mike/!svn/ver/99/truss/grammars/Delaunay_fixed_topology_genome_a.bnf
+END
+Delaunay_fixed_topology_genome_b.bnf
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/Mike/!svn/ver/99/truss/grammars/Delaunay_fixed_topology_genome_b.bnf
+END

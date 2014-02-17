@@ -1,0 +1,26 @@
+INSTALLATION: 
+    software requirements
+        the mesaGL libraries:
+            sudo aptitude install libosmesa6 libosmesa6-dev 
+
+        slffea
+            http://slffea.sourceforge.net/download.html
+            once you compile it, create symbolic links for the truss analyser
+            in your /usr/local/bin folder.
+            ln -s ./slffea-1.5/truss/truss/ts /usr/local/bin
+            ln -s ./slffea-1.5/truss/truss_gr/tspost /usr/local/bin
+
+OVERVIEW:
+    evolver.py <- standalone EA that generates the individuals,
+        and calls the fitness function, uses grammar.py to map individuals
+    analyser <- generates slffea mesh from phenotype and calcs fitness
+    grammar.py <- contains bnf_parser and derivation tree classes
+    graph.py <- extends networkx for creating 3D graphs
+    geometry <- utility class with geometry methods
+    multi_run.py <- kicks off multiple evolutionary runs in sequence
+
+    geometry class: 
+        pass in point [x,y,z] or pointList returns new point or pointList
+    graph class:
+        pass in point[x,y,z], if new point then add to graph, return node_id
+        pass in node_ids, if no edge between nodes then add edge

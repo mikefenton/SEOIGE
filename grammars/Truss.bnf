@@ -1,0 +1,39 @@
+#trusses.bnf - an automatic truss generator
+#Michael Fenton <michaelfenton1@gmail.com>
+
+<S> ::= <program>{}<call>
+<program> ::= def mutant():{<init>{}<constants>{}<define_funcs>{}<make_all>{}<return>{}}
+
+<init> ::= truss_graph = graph.graph(){}
+
+<constants> ::= span = <span>{}half_span = span/2{}depth = <depth>{}r = <r>{}{}truss_graph.save_graph_info(["truss", span, depth]){}
+
+<define_funcs> ::= <check>{}<chord>{}<cross_brace>{}
+
+<check> ::= def check(r):{if r%2==0:{return "even"}else:{return "odd"}}
+
+<chord> ::= def chord(r):{top_chord = []{}bottom_chord = []{}for i in range (r+1):{bay_span = (i)*half_span/(r){}tnode, bnode = [0,bay_span,depth], [0,bay_span,0]{}top_chord.append(tnode){}bottom_chord.append(bnode)}return top_chord, bottom_chord}
+
+<cross_brace> ::= def cross_brace(r):{edge_list = []{}top_ids = []{}bottom_ids = []{}chords = chord(r){}top_chord = chords[0]{}bottom_chord = chords[1]{}for i in range(r+1):{if i == 0:{new_top_id = truss_graph.add_unique_node(top_chord[i], 'load'){}new_bottom_id = truss_graph.add_unique_node(bottom_chord[i], 'bottom')}elif i == r:{new_bottom_id = truss_graph.add_unique_node(bottom_chord[i], 'fixed'){}new_top_id = truss_graph.add_unique_node(top_chord[i], 'top')}else:{new_bottom_id = truss_graph.add_unique_node(bottom_chord[i], 'bottom'){}new_top_id = truss_graph.add_unique_node(top_chord[i], 'top')}top_ids.append(new_top_id){}bottom_ids.append(new_bottom_id)}for i, ind in enumerate(top_ids):{if i != (r):{pair = [top_ids[i], top_ids[i+1]]{}if pair not in edge_list:{edge_list.append(pair)}}}for i, ind in enumerate(bottom_ids):{if i != (r):{pair = [bottom_ids[i], bottom_ids[i+1]]{}if pair not in edge_list:{edge_list.append(pair)}}}<connection_type>{}edge_list.sort(){}for i, edge in enumerate(edge_list):{truss_graph.add_edge(edge[0], edge[1], material=genome[i])}return edge_list} 
+
+<connection_type> ::= <howe>|<pratt>|<howe>|<fully_braced>|<warren>|<modified_warren>|<vierendeel>
+
+<pratt> ::= """Pratt"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<howe> ::= """Howe"""{}for i in range(len(top_ids)):{if i+1 < len(top_ids):{pair = [bottom_ids[i+1], top_ids[i]]{}if pair not in edge_list:{edge_list.append(pair)}}bear = [bottom_ids[i], top_ids[i]]{}if bear not in edge_list:{edge_list.append(bear)}}
+
+<fully_braced> ::= """Fully Braced"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i+1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}
+
+<warren> ::= """Warren"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if check(r) == "odd":{for x in range(0, r, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if i == a+1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i == (r):{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}else:{for x in range(0, r+1, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if i == a+1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i == r:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}}
+
+<modified_warren> ::= """Modified Warren"""{}for i, xyz in enumerate(top_ids):{for a, zyx in enumerate(bottom_ids):{if check(r) == "odd":{for x in range(0, r, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}else:{for x in range(0, r+1, 2):{if i==x:{if i == a-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}if a == i-1:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}if a == i:{pair = [zyx, xyz]{}if pair not in edge_list:{edge_list.append(pair)}}}}}
+
+<vierendeel> ::= """Vierendeel"""{}for i in range(len(top_ids)):{pair = [bottom_ids[i], top_ids[i]]{}if pair not in edge_list:{edge_list.append(pair)}}
+
+<r> ::= 2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20
+<span> ::= 24000
+<depth> ::= <span>/10|<span>/11|<span>/12|<span>/13|<span>/14|<span>/15|<span>/16|<span>/17|<span>/18|<span>/19|<span>/20|<span>/21|<span>/22|<span>/23|<span>/24|<span>/25
+
+<make_all> ::= edge_list = cross_brace(r){}mirror_graph = truss_graph.copy_and_offset_with_mirror(truss_graph, [0, 0, 0], True){}truss_graph.replace_graph(mirror_graph){}
+<return> ::= return [truss_graph, len(edge_list), False, False, "truss"]{}
+<call> ::= XXXeval_or_exec_outputXXX = mutant()

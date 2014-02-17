@@ -1,0 +1,33 @@
+#delaunay.bnf - an automatic delaunay truss generator
+#Michael Fenton <michaelfenton1@gmail.com>
+
+<S> ::= <program>{}<call>
+<program> ::= def mutant():{<set_mesh_resolution>{}<init>{}<constants>{}<cross_brace>{}<get_genome>{}<make_truss>{}<make_all>{}<return>{}}
+<init> ::= truss_graph = graph.graph(){}state = random.getstate(){}resolution = set_mesh_resolution(){}
+<constants> ::= span = <span>{}depth = <depth>{}edge_list = []{}truss_graph.save_graph_info(["delaunay", span, depth]){}
+
+<cross_brace> ::= def cross_brace():{NON_TRIANGLE = False{}top_ids = []{}bottom_ids = []{}resolution = set_mesh_resolution(){}top_list = [[0, None, 0, None, depth], [0, None, <half_span>, None, depth]]{}bottom_list = [[0, None, 0, None, 0], [0, None, <half_span>, None, 0]]{}"""Delaunay"""{}sett = [<node_iter>]{}for node in top_list:{if node not in sett:{sett.append(node)}}{}for node in bottom_list:{if node not in sett:{sett.append(node)}}{}sett.sort(){}new_set = []{}for point in sett:{node = [point[0], point[2], point[4]]{}if node not in new_set:{new_set.append(node)}}for node in new_set:{node_id = truss_graph.add_unique_node(node, str(node))}a = []{}b = []{}for i in new_set:{a.append(i[1]){}b.append(i[2])}cens,edg,tri,neig = triang.delaunay(a,b){}for i, triangle in enumerate(tri):{if len(triangle) == 3:{one = [triangle[0], triangle[1]]{}two = [triangle[1], triangle[2]]{}three = [triangle[0], triangle[2]]{}if one not in edge_list:{edge_list.append(one)}if two not in edge_list:{edge_list.append(two)}if three not in edge_list:{edge_list.append(three)}}else:{print "Non-triangle detected: ", len(triangle){}NON_TRIANGLE = True{}break}}return NON_TRIANGLE}
+
+#node_id = truss_graph.add_unique_node(node, str(node))}{}new_set = []{}for node in truss_graph.node:{point = truss_graph.node[node]['xyz']{}new_set_point = [point[1], point[2]]{}new_set.append(new_set_point)}{}answer = delaunay.Triangulation(new_set){}for i, triangle in enumerate(answer.get_elements_indices()):{if len(triangle) == 3:{one = [triangle[0], triangle[1]]{}two = [triangle[1], triangle[2]]{}three = [triangle[0], triangle[2]]{}if one not in edge_list:{edge_list.append(one)}if two not in edge_list:{edge_list.append(two)}if three not in edge_list:{edge_list.append(three)}}else:{print "Non-triangle detected: ", len(triangle){}NON_TRIANGLE = True{}break}}return NON_TRIANGLE}
+
+<get_genome> ::= def get_genome(i):{return genome[i % len(genome)]}
+<make_truss> ::= def make_truss():{target = len(edge_list){}for i, edge in enumerate(edge_list):{truss_graph.add_edge(edge[0], edge[1], material=get_genome(i))}}
+<set_mesh_resolution> ::= def set_mesh_resolution():{if ave[-1] > 1000000000:{resolution = 100}else:{resolution = 10}return resolution}
+
+<n> ::= 0|1|2|3|4|5|6|7|8|9
+<rand_y> ::= 0, 0 | <set_rand>, depth-random.randrange(0,depth, resolution) | <set_rand>, depth-random.randrange(0,depth, resolution) | 0, depth
+<rand_x> ::= <set_rand>, <half_span>-random.randrange(0,<half_span>, resolution) | <set_rand>, <half_span>-random.randrange(0,<half_span>, resolution)
+<set_rand> ::= random.seed(int("<n><n><n>"))
+
+<span> ::= 10000
+<half_span> ::= <span>/2
+<depth> ::= <span>/10
+#|<span>/11|<span>/12|<span>/13|<span>/14|<span>/15|<span>/16|<span>/17|<span>/18|<span>/19|<span>/20|<span>/21|<span>/22
+
+<node_iter> ::= <node>,<node> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> | <node>,<node>,<node_iter> |<node>,<node>,<node_iter>
+
+<node> ::= [0, <rand_x>, <rand_y>]
+
+<make_all> ::= NON_TRIANGLE = cross_brace(){}make_truss(){}truss_graph.sort_truss_support_nodes(truss_graph, span){}truss_graph.sort_truss_load_nodes(truss_graph, span, depth){}mirror_graph = truss_graph.copy_and_offset_with_mirror(truss_graph, [0, 0, 0], True){}truss_graph.replace_graph(mirror_graph){}random.setstate(state){}
+<return> ::= return [truss_graph, len(edge_list), NON_TRIANGLE, False, "truss"]{}
+<call> ::= XXXeval_or_exec_outputXXX = mutant()
