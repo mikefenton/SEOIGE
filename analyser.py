@@ -8,16 +8,20 @@ ALL UNITS IN MILLIMETERS, NEWTONS
 Copyright (c) 2012
 Michael Fenton, Jonathan Byrne, Erik Hemberg and James McDermott
 Hereby licensed under the GNU GPL v3."""
-import subprocess, time, operator, graph, random, matplotlib.delaunay, grammar, datetime, shutil, evolver
-from geometry import *
-from math import *
+import time, graph, random, matplotlib.delaunay, grammar
+import evolver
+#from grammar import generate
+from subprocess import PIPE, Popen
+from shutil import copyfile
+from datetime import datetime
+from geometry import interpolate, three_d_line_length
+from math import atan, tan, cos, pi, sqrt
 from operator import itemgetter
-import os
+from os import remove
 
 # global class variables
 # Fitness variables
 DEATH_PENALTY = False
-MAX_FAILURE = False
 DEFAULT_FIT = 1000000000000
 
 # Analysis variables
@@ -25,29 +29,38 @@ BUCKLING_CHECK = True
 REMOVE_UNSTRESSED_EDGES = False
 SHOW_ANALYSIS = False
 
-OPTIMIZE = True # Turns on the pre-fitness function optimizer which will optimize the whole population
+OPTIMIZE = True
+# Turns on the pre-fitness function optimizer which will
+# optimize the whole population
 STEPS = 5
+# Number of optimization steps
 OPT_ALL = True
-BEST_STOP = True
+# Optimize all individuals in a generation
+BEST_STOP = False
+# Stop optimization once better fitness is discovered
 GENOME_REWRITE = True
-#random.seed(0)
+# Re-write Ch.B with new member sizes
 
-def eval_or_exec(name, time, s, gen, ave, mats, MAT_FILE, used_codons_a, LOAD, generation, Fitnesses, DEBUG = False, FINAL=False):
+def eval_or_exec(name, time, s, gen, ave, MAT_FILE, used_codons_a, 
+                 LOAD, generation, Fitnesses, DEBUG = False, FINAL=False):
     """Handles different return vals from eval/exec"""
-    s = python_filter(name, time, s, gen, ave, MAT_FILE, used_codons_a, LOAD, generation, Fitnesses, DEBUG, FINAL)
-    dictionary = {"itemgetter": itemgetter, "genome": gen, "graph": graph, "interpolate": interpolate, "sqrt":sqrt, "atan": atan, "tan": tan, "cos":cos, "pi":pi, "random": random, "ave": ave, "triang": matplotlib.delaunay}
-    genome = gen
+    s = python_filter(name, time, s, gen, ave, MAT_FILE, used_codons_a, LOAD, 
+                      generation, Fitnesses, DEBUG, FINAL)
+    dictionary = {"itemgetter": itemgetter, "genome": gen, "graph": graph,
+                  "interpolate": interpolate, "sqrt":sqrt, "atan": atan,
+                  "tan": tan, "cos":cos, "pi":pi, "random": random,
+                  "ave": ave, "triang": matplotlib.delaunay}
     exec(s, dictionary)
     retval = dictionary['XXXeval_or_exec_outputXXX']
     return retval
 
-def python_filter(name, time, txt, genome, ave, MAT_FILE, used_codons_a, LOAD, generation, Fitnesses, DEBUG = False, FINAL=False):
+def python_filter(name, time, txt, genome, ave, MAT_FILE, used_codons_a, LOAD,
+                  generation, Fitnesses, DEBUG = False, FINAL=False):
     """Converts text into indented python code"""
     counter = 0
     if txt == None:
         log_error("None", "no program generated")
-        return 0    
-  #  print LOAD
+        return 0
     for char in txt:
         if char == "{":
             counter += 1
@@ -64,45 +77,63 @@ def python_filter(name, time, txt, genome, ave, MAT_FILE, used_codons_a, LOAD, g
         else:
             blame = "whatagrammar.py"
         temp = open("temp", "w")
-        temp.write('SHOW = False\ndef run():\n    import analyser, evolver, subprocess, graph, operator, geometry, random, os\n    import matplotlib.delaunay as triang\n    from operator import itemgetter\n    from math import sqrt\n\n')
-        temp.write('    if os.path.isdir("/home/michael/Dropbox/Collij/Mike/truss/slf"):\n        pass\n    else:\n        os.mkdir("/home/michael/Dropbox/Collij/Mike/truss/slf")\n')
-        temp.write('    def lt(val_a, val_b):\n        """less than op for conditionals in generated code"""\n        return operator.lt(val_a, val_b)\n')
-        temp.write('    def le(val_a, val_b):\n        """less than or equal op for conditionals in generated code"""\n        return operator.le(val_a, val_b)\n')
-        temp.write('    def gt(val_a, val_b):\n        """greater than op for conditionals in generated code"""\n        return operator.gt(val_a, val_b)\n')
+        temp.write('SHOW = False\ndef run():\n')
+        temp.write('    import analyser, evolver, subprocess, graph, operator')
+        temp.write(', geometry, random, os\n')
+        temp.write('    import matplotlib.delaunay as triang\n')
+        temp.write('    from operator import itemgetter\n')
+        temp.write('    from math import sqrt\n\n    ')
+        temp.write('if os.path.isdir("/home/michael/Dropbox/Collij/Mike/')
+        temp.write('truss/slf"):')
+        temp.write('\n        pass\n    else:\n        ')
+        temp.write('os.mkdir("/home/michael/Dropbox/Collij/Mike/truss/slf")\n')
         temp.write('    genome = ' + str(genome) + '\n')
         temp.write('    ave = ' + str(ave) + '\n')
         temp.write('    MAT_FILE = \"' + str(MAT_FILE) + '\"\n')
         temp.write('    LOAD = ' + str(LOAD) + '\n')
         temp.write(txt)
-        temp.write("\n    testGraph = mutant()\n    mats = evolver.assign_size(MAT_FILE)\n    analyser = analyser.Analyser(" + str(name) + ", 'test','testGraph', genome, " + str(used_codons_a) + ", testGraph[1], " + str(ave) + ", mats, " + str(generation) + ", LOAD, MAT_FILE, True)\n    analyser.my_graph=testGraph[0]\n    grammar_type = testGraph[3]\n    if grammar_type == \"cant\":\n        analyser.cantilever = True\n    if grammar_type == \"truss\":\n        analyser.truss = True\n    fitness = analyser.run_graph(" + str(Fitnesses) + ", LOAD, " + str(OPTIMIZE) + ", " + str(GENOME_REWRITE) + ", SHOW)\n    return fitness[0]\n\nif __name__ == '__main__':\n    run()")
+        temp.write("\n    testGraph = mutant()\n    ")
+        temp.write("mats = evolver.assign_size(MAT_FILE)\n    ")
+        temp.write("analyser = analyser.Analyser(" + str(name))
+        temp.write(", 'test','testGraph', genome, " + str(used_codons_a))
+        temp.write(", testGraph[1], " + str(ave) + ", mats, " + str(generation))
+        temp.write(", LOAD, MAT_FILE)\n")
+        temp.write("    analyser.my_graph=testGraph[0]")
+        temp.write("\n    grammar_type = testGraph[2]\n    if grammar_type == ")
+        temp.write("\"cant\":\n        analyser.cantilever = True\n    ")
+        temp.write("if grammar_type == \"truss\":\n        ")
+        temp.write("analyser.truss = True\n    fitness = analyser.run_graph(")
+        temp.write(str(Fitnesses) + ", " + str(OPTIMIZE) + ", ")
+        temp.write(str(GENOME_REWRITE) + ", SHOW)\n    return fitness[0]\n\n")
+        temp.write("if __name__ == '__main__':\n    run()")
         temp.close()
         old = open("temp", "r")
         new = open(blame, "w")
         lines = old.readlines()
-        for i in range(0,24):
+        for i in range(0, 15):
             new.write(lines[i])
         if evolver.GRAMMAR_FILE == "grammars/Delaunay_cantilever.bnf":
-            for i in range(24,137):
+            for i in range(15, 128):
                 new.write("    " + str(lines[i]))
-            for i in range(137,len(lines)):
+            for i in range(128, len(lines)):
                 new.write(lines[i])
         elif evolver.GRAMMAR_FILE == "grammars/Delaunay.bnf":
-            for i in range(24,129):
+            for i in range(15, 128):
                 new.write("    " + str(lines[i]))
-            for i in range(129,len(lines)):
+            for i in range(128, len(lines)):
                 new.write(lines[i])
         elif evolver.GRAMMAR_FILE == "grammars/Delaunay_cantilever_test.bnf":
-            for i in range(24,120):
+            for i in range(15, 111):
                 new.write("    " + str(lines[i]))
-            for i in range(120,len(lines)):
+            for i in range(111, len(lines)):
                 new.write(lines[i])
         else:
-            for i in range(24,120):
+            for i in range(15, 111):
                 new.write("    " + str(lines[i]))
-            for i in range(120,len(lines)):
+            for i in range(111, len(lines)):
                 new.write(lines[i])
         old.close()
-        os.remove("temp")
+        remove("temp")
     return txt
 
 def log_error(phenotype, msg):
@@ -118,7 +149,9 @@ class Analyser():
     It is then analysed by slffea and the result is processed to
     generate a fitness value"""
 
-    def __init__(self, arse, unique_id, program, genome_b, used_codons_a, used_codons_b, ave, materials, generation, LOAD, MATERIALS_FILE, save=False):
+    def __init__(self, arse, unique_id, program, genome_b, used_codons_a,
+                 used_codons_b, ave, materials, generation, LOAD,
+                 MATERIALS_FILE):
         """stores all the slffea values"""
         self.generation = generation
         self.name = arse
@@ -146,29 +179,32 @@ class Analyser():
         self.fitness_selections = []
         self.node_list = []
         self.edge_list = []
+        self.opt_edge_list = []
+        self.fixed_list = []
+        self.nodeselfloads = []
+        self.point_load_nodes = []
+        self.corner_load_nodes = []
+        self.load_elems = []
+        self.new_node_list = []
+        self.truss_type = None
+        self.UDL_per_m = 0
+        self.depth = 0
+        self.range = 0
 
-    def set_values(self):
-        """saves the individual's graph info"""
-        generated_values = grammar.generate(self.genome_a, self.genome_b)
-        self.set_values(generated_values)
-
-    def create_graph(self, time, program, genome, LOAD, Fitnesses, DEBUG = False, FINAL=False):
+    def create_graph(self, time, program, genome, LOAD, Fitnesses,
+                     DEBUG = False, FINAL=False):
         """execute program to create the graph """
-        answer = eval_or_exec(self.name, time, program, genome, self.previous_gen_ave, self.beams, self.MATERIALS_FILE, self.used_codons_a, LOAD, self.generation, Fitnesses, DEBUG, FINAL)
+        answer = eval_or_exec(self.name, time, program, genome,
+                              self.previous_gen_ave, self.MATERIALS_FILE,
+                              self.used_codons_a, LOAD, self.generation,
+                              Fitnesses, DEBUG, FINAL)
         self.my_graph = answer[0]
         self.used_codons_b = answer[1]
-        self.CUT_A_CODONS = answer[2]
-        grammar_type = answer[3]
+        grammar_type = answer[2]
         if grammar_type == "cant":
             self.cantilever = True
         if grammar_type == "truss":
             self.truss = True
-        if self.CUT_A_CODONS:
-            if isinstance(self.used_codons_a, (int, long)):
-                self.used_codons_a = self.used_codons_b
-            else:
-                self.used_codons_a = self.used_codons_a[0:self.used_codons_b]
-            self.used_codons_b = 0
         self.parse_graph()
 
     def parse_graph(self):
@@ -190,7 +226,6 @@ class Analyser():
         for idx, edge in enumerate(self.my_graph.edges_iter(data=True)):
             material = edge[2]['material']
             genome_id = edge[2]['genome_id']
-            index = str(idx)
             node = self.node_list[int(edge[0])]
             node1 = node
             label_1 = node['label']
@@ -209,7 +244,7 @@ class Analyser():
                 name = 'load'
             else:
                 name = "crossbrace"
-            length = three_d_line_length(node1,node2) # millimeters
+            length = three_d_line_length(node1, node2) # millimeters
             beam = self.beams[int(material)]
             area = beam['area']
             diameter = beam['diameter']
@@ -221,9 +256,9 @@ class Analyser():
             mass = length *  float(beam['unitweight']) # answer is in kg #
             total_mass = mass+total_mass
             max_c_s = self.get_max_c_s(diameter, area, length, beam)
-            edge = {'id':idx,'pt_a':int(edge[0]),'pt_b':int(edge[1]),
-                        'material':int(material),'length':float(length),
-                        'mass':float(mass),'area':str(area),
+            edge = {'id':idx, 'pt_a':int(edge[0]), 'pt_b':int(edge[1]),
+                        'material':int(material), 'length':float(length),
+                        'mass':float(mass), 'area':str(area),
                         'label':name, 'diameter':float(diameter),
                         'thickness':float(thickness),
                         'unitweight':float(unitweight),
@@ -239,11 +274,11 @@ class Analyser():
         for a given section"""
         if self.MATERIALS_FILE == "CHSTables":
             if diameter > 270:
-                lengths = [0,2,3,4,5,6,7,8,9,10,11,12,13,14]
+                lengths = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
             else:
-                lengths = [0,1,1.5,2,2.5,3,3.5,4,5,6,7,8,9,10]
+                lengths = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10]
         else:
-            lengths = [0,1,1.5,2,2.5,3,3.5,4,5,6,7,8,9,10]
+            lengths = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10]
         while len(lengths) != 1:
             first = lengths.pop(0)
             second = lengths[0]
@@ -275,14 +310,14 @@ class Analyser():
         if evolver.MAKE_GIF: # Makes an image of the individual
             self.mesh_to_pic(name) 
             filename = "Pics/"+str(name)+".ppm"
-            shutil.copyfile("population/"+str(name)+".ppm", filename)
+            copyfile("population/"+str(name)+".ppm", filename)
 
     def mesh_to_pic(self, name):
         """run the picture generating program linuxMedit, you must have
         compiled linuxMedit and added it to /usr/local/bin"""
         cmd = 'linuxMedit'
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                                   stdin=subprocess.PIPE)
+        process = Popen(cmd, shell=True, stdout=PIPE,
+                                   stdin=PIPE)
         process.communicate("population/"+str(name)+".mesh")
 
     def save_dxf(self, name):
@@ -353,7 +388,7 @@ class Analyser():
         if dnodeselfloads:
             self.my_graph.collapse(dnodeselfloads, self.nodeselfloads)
         else:
-            print "ERROR!!********************NO DNODESELFLOADS THING!************************"
+            print "ERROR!!************NO DNODESELFLOADS THING!****************"
     
     def add_self_loads(self, edge, a, b, nodes):
         """SLFFEA doesn't consider the mass of the element;
@@ -362,8 +397,8 @@ class Analyser():
         Load per node is in newtons - to add self loading, 
         remove the zero. To remove self loading, comment out the 'load'."""
         load = 0 # float(edge['mass']) / 2
-        loadA = [a,load]
-        loadB = [b,load]
+        loadA = [a, load]
+        loadB = [b, load]
         nodes.append(loadA)
         nodes.append(loadB)
         return nodes
@@ -375,16 +410,18 @@ class Analyser():
         mesh.write(str(len(edges))+'\t'+str(len(self.node_list))
                     + '\t'+str(len(self.beams)) + '\t0\n')
         mesh.write('matl no., E modulus, density, and Area\n')
-        for i,beam in enumerate(self.beams):
-             mesh.write(str(i)+'\t'+str(self.beams[i]['emod'])+'\t'
-                        + str(self.beams[i]['density'])+'\t'+str(self.beams[i]['area'])+ '\n')       
-        mesh.write('el no.,connectivity, matl no\n')
+        for i in range(len(self.beams)):
+            mesh.write(str(i)+'\t'+str(self.beams[i]['emod'])+'\t'
+                    + str(self.beams[i]['density'])+'\t'
+                    +str(self.beams[i]['area'])+ '\n')
+        mesh.write('el no., connectivity, matl no\n')
         for i, edge in enumerate(edges):
             mesh.write(str(i)+'\t'+str(edge['pt_a'])+'\t'+str(edge['pt_b'])
-                       + '\t'+str(edge['material'])+'\n')
+                    + '\t'+str(edge['material'])+'\n')
         mesh.write('node no., coordinates\n')
         for node in self.node_list:
-            mesh.write(node['id']+'\t'+str(node['x'])+'\t'+str(node['y'])+'\t'+str(node['z'])+"\n")
+            mesh.write(node['id']+'\t'+str(node['x'])+'\t'+str(node['y'])+'\t'
+                    +str(node['z'])+"\n")
         mesh.write('prescribed displacement x: node  disp value\n')
         for node in self.fixed_list:           
             mesh.write(node[0]['id']+"\t0.0\n")
@@ -395,12 +432,13 @@ class Analyser():
         mesh.write('-10\nprescribed displacement z: node  disp value\n')
         for node in self.node_list:
             mesh.write(node['id']+"\t0.0\n")
-        mesh.write('-10\nnode with point load and load vector in x,y,z\n')          
+        mesh.write('-10\nnode with point load and load vector in x, y, z\n')          
         if self.point:
             for node in self.nodeselfloads:
                 if node[0] in self.point_load_nodes: 
                     node[1] = node[1] + self.point_load
-                    mesh.write(str(node[0])+'\t0\t-'+str(round(node[1],5))+'\t0\n')
+                    mesh.write(str(node[0])+'\t0\t-'+str(round(node[1], 5))
+                        +'\t0\n')
         mesh.write('-10\nelement with stress and tensile stress vector\n-10')
         mesh.close()
 
@@ -408,15 +446,13 @@ class Analyser():
         """run the structural analysis software, you must have
         compiled slffea and added ts and tspost to /usr/local/bin"""
         cmd = 'ts'
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                                   stdin=subprocess.PIPE)
+        process = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE)
         process.communicate("slf/"+str(self.name))
             
     def show_analysis(self):
         """use tspost to show stresses"""
         cmd = "echo slf/" + str(self.name) + '.ots | tspost'
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                                   stdin=subprocess.PIPE)
+        process = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE)
         process.communicate("slf/" + str(self.name))
 
     def parse_results(self, edges):
@@ -425,7 +461,8 @@ class Analyser():
         header1 = ("element no. with stress and tensile stress vector")
         header3 = ("node no., coordinates")
         self.length_a = len(edges)
-        results = open("slf/" + str(self.name) + '.ots', 'r')  # opens the results file
+        results = open("slf/" + str(self.name) + '.ots', 'r')
+        # opens the results file
         lines = iter(results)
         self.new_node_list = []
         for line in lines:
@@ -436,7 +473,8 @@ class Analyser():
                     if result[0] == ('prescribed'):
                         break
                     # find the new node locations
-                    idx, x, y, z = int(result[0]),float(result[1]),float(result[2]),float(result[3])
+                    idx, x = int(result[0]), float(result[1])
+                    y, z = float(result[2]), float(result[3])
                     node = {'id': idx, 'x': x, 'y': y, 'z': z}
                     self.new_node_list.append(node)
                     line = lines.next()
@@ -465,8 +503,8 @@ class Analyser():
 
     def delete_all_files(self):
         """Delete all SLFFEA analysis files"""
-        os.remove("slf/" + str(self.name))
-        os.remove("slf/" + str(self.name) + '.ots')
+        remove("slf/" + str(self.name))
+        remove("slf/" + str(self.name) + '.ots')
 
     def run_optimization(self, steps, Fitnesses, previous, PRINT = False):
         """Optimizes the member sizes for a given structure, based on material
@@ -476,7 +514,6 @@ class Analyser():
         of steps, or until a better fitness is achieved."""
         edges = []
         edges = self.edge_list # create a copy of the edge list
-        self.opt_edge_list = []
         
         # First optimization pass
         self.reassign_materials_quickly(self.edge_list)
@@ -486,20 +523,20 @@ class Analyser():
         self.parse_results(self.opt_edge_list)
         answer = self.calculate_fitness(Fitnesses, self.opt_edge_list, PRINT)
         if PRINT:
-            print "\nFitness step 1 :",answer
+            print "\nOptimization step 1 complete :", answer
+            print "___________________________________________\n"
         if answer[0] < previous[0]:
             edges = self.opt_edge_list
             previous = answer
         n = 2
         if BEST_STOP: # Stop iterating once a better fitness is achieved
             while (answer[0] > previous[0]):
-                self.good = False
                 self.reassign_size()
-                answer = self.calculate_fitness(Fitnesses, self.opt_edge_list, PRINT)
+                answer = self.calculate_fitness(Fitnesses, self.opt_edge_list,
+                                                PRINT)
                 if PRINT:
-                    print "\nFitness step",n,":",answer
-                    for edge in self.opt_edge_list:
-                        print edge['material'], edge['genome_id']
+                    print "\nOptimization step", n, "complete:", answer
+                    print "___________________________________________\n"
                 if answer[0] < previous[0]: # found a better solution
                     edges = self.opt_edge_list
                     previous = answer
@@ -508,25 +545,23 @@ class Analyser():
                     break
         else: # keep going for a specified number of steps.
             while n < steps:
-                self.good = False
                 self.reassign_size()
-                answer = self.calculate_fitness(Fitnesses, self.opt_edge_list, PRINT)
-                
+                answer = self.calculate_fitness(Fitnesses, self.opt_edge_list,
+                                                PRINT)
                 if PRINT:
-                    print "\nFitness step",n,":",answer
-                    for edge in self.opt_edge_list:
-                        print edge['material'], edge['genome_id']
+                    print "\nOptimization step", n, "complete:", answer
+                    print "___________________________________________\n"
                 if answer[0] < previous[0]: # we've found a better solution
                     edges = self.opt_edge_list
                     previous = answer
                 n += 1
         if GENOME_REWRITE: # re-writes the member sizing genome
             if PRINT:
-                print "Before:",self.genome_b[:self.used_codons_b]
+                print "Before:", self.genome_b[:self.used_codons_b]
             for edge in edges:
                 self.genome_b[edge['genome_id']] = edge['material']
             if PRINT:
-                print "After:",self.genome_b[:self.used_codons_b]
+                print "After:", self.genome_b[:self.used_codons_b]
         self.apply_stresses(edges)
         self.create_slf_file(edges)
         self.test_slf_file()
@@ -546,7 +581,6 @@ class Analyser():
         area for each member based on the actual stress in the member
         and its capacity. Reassigns that member to the nearest available
         section."""
-        self.opt_edge_list = []
         wedge_list = []
         for edge in edges:
             dredge = {}
@@ -579,8 +613,10 @@ class Analyser():
                 dredge['thickness'] = beam['thickness']
                 dredge['emod'] = edge['emod']
                 dredge['I'] = beam['I']
-                dredge['max_c_s'] = self.get_max_c_s(dredge['diameter'], dredge['area'], dredge['length'], beam)
-                dredge['mass'] = float(dredge['length']) * float(dredge['unitweight']) # answer is in Newtons
+                dredge['max_c_s'] = self.get_max_c_s(dredge['diameter'],
+                    dredge['area'], dredge['length'], beam)
+                dredge['mass'] = float(dredge['length']) * float(dredge['unitweight'])
+                # answer is in Newtons
                 wedge_list.append(dredge)
             elif required_area < self.beams[0]['area']:
                 beam = self.beams[0]
@@ -599,11 +635,13 @@ class Analyser():
                 dredge['thickness'] = beam['thickness']
                 dredge['emod'] = edge['emod']
                 dredge['I'] = beam['I']
-                dredge['max_c_s'] = self.get_max_c_s(dredge['diameter'], dredge['area'], dredge['length'], beam)
-                dredge['mass'] = float(dredge['length']) * float(dredge['unitweight']) # answer is in Newtons
+                dredge['max_c_s'] = self.get_max_c_s(dredge['diameter'],
+                                        dredge['area'], dredge['length'], beam)
+                dredge['mass'] = float(dredge['length']) * float(dredge['unitweight'])
+                # answer is in Newtons
                 wedge_list.append(dredge)
             else:
-                for a,beam in enumerate(self.beams):
+                for a, beam in enumerate(self.beams):
                     if a > 0:
                         if self.beams[a-1]['area'] < required_area < self.beams[a]['area']:
                             beam = self.beams[a]
@@ -623,7 +661,8 @@ class Analyser():
                             dredge['emod'] = edge['emod']
                             dredge['I'] = beam['I']
                             dredge['max_c_s'] = self.get_max_c_s(dredge['diameter'], dredge['area'], dredge['length'], beam)
-                            dredge['mass'] = float(dredge['length']) * float(dredge['unitweight']) # answer is in Newtons
+                            dredge['mass'] = float(dredge['length']) * float(dredge['unitweight'])
+                            # answer is in Newtons
                             wedge_list.append(dredge)
                             break
         self.opt_edge_list = wedge_list
@@ -648,7 +687,9 @@ class Analyser():
         max_norm_comp = 0 # maximum normalised compression
         total_cost = 0 # structure cost
         failure_counter = 0 # how many constraints have failed?
-        cum_difference = 0 # the cumulative difference by which all failed constraints have failed
+        cum_difference = 0 # the cumulative difference by which all 
+                           # failed constraints have failed
+        self.good = False # Need to set the fitness to bad before analysys
         
         # Set tensile stress limits
         if self.MATERIALS_FILE == "CSSTables" or self.MATERIALS_FILE == "test1":
@@ -659,7 +700,7 @@ class Analyser():
         # Check 3 dimensional deflection of all nodes, find maximum
         for node in self.node_list:
             point = self.new_node_list[int(node['id'])]
-            displacement = three_d_line_length(node,point)
+            displacement = three_d_line_length(node, point)
             if displacement > max_displacement:
                 max_displacement = displacement
             if displacement > max_allowable_displacement:
@@ -667,9 +708,11 @@ class Analyser():
                 diff = self.normalise(displacement, max_allowable_displacement)
                 cum_difference = diff + cum_difference
                 if PRINT:
-                    print "Node",node['id']," Fails in displacement by",displacement -max_allowable_displacement, "mm"
+                    print "Node", node['id'], " Fails in displacement by",
+                    print displacement -max_allowable_displacement, "mm"
         
-        # STEEL DESIGN TO BS 449 (TAKEN FROM STRUCTURAL ENGINEERS POCKETBOOK)- S355 STEEL!
+        # STEEL DESIGN TO BS 449 (TAKEN FROM STRUCTURAL ENGINEERS POCKETBOOK)
+        # S355 STEEL!
         for edge in edges:
             total_weight = (total_weight + float(edge['mass']))
             
@@ -679,12 +722,15 @@ class Analyser():
                     max_tensile_stress = edge['stress']
                 if edge['stress'] > max_allowable_tensile_stress:
                     failure_counter += 1
-                    diff = self.normalise(edge['stress'], max_allowable_tensile_stress)
+                    diff = self.normalise(edge['stress'],
+                           max_allowable_tensile_stress)
                     if diff > max_norm_tens:
                         max_norm_tens = diff
                     cum_difference = diff + cum_difference
                     if PRINT:
-                        print "Element",edge['id'],"(material",edge['material'],") fails in tension by",diff, "%"
+                        print "Element", edge['id'], "(material",
+                        print edge['material'], ") fails in tension by", diff,
+                        print "%"
             
             else: # member is in compression
                 # EULER BUCKLING CHECK
@@ -712,7 +758,9 @@ class Analyser():
                         max_norm_comp = diff
                     cum_difference = diff + cum_difference
                     if PRINT:
-                        print "Element",edge['id'],"(material",edge['material'],") fails in compression by",diff, "%"
+                        print "Element", edge['id'], "(material",
+                        print edge['material'], ") fails in compression by",
+                        print diff, "%"
         
         # Total structure weight in Imperial units
         total_weight = total_weight*2.20462
@@ -720,59 +768,68 @@ class Analyser():
         
         # Compare all against limits
         if max_displacement > max_allowable_displacement:
-            max_norm_disp = self.normalise(max_displacement, max_allowable_displacement)
+            max_norm_disp = self.normalise(max_displacement,
+                        max_allowable_displacement)
             if PRINT:
-                print "Maximum Actual Displacement (normalised) =", max_norm_disp, "% above limit"
+                print "Maximum Actual Displacement (normalised) =",
+                print max_norm_disp, "% above limit"
         if PRINT:
             if max_norm_tens > 0:
-                print "Maximum % Tensile Stress over the limit:", max_norm_tens, "% above limit"
+                print "Maximum % Tensile Stress over the limit:",
+                print max_norm_tens, "% above limit"
             if max_norm_comp > 0:
-                print "Maximum % Compressive Stress over the limit:", max_norm_comp, "% above limit"
-        all_norm_fail = [["max_norm_disp",max_norm_disp],["max_norm_tens",max_norm_tens],["max_norm_comp",max_norm_comp]]
+                print "Maximum % Compressive Stress over the limit:",
+                print max_norm_comp, "% above limit"
+        all_norm_fail = [["max_norm_disp", max_norm_disp],
+            ["max_norm_tens", max_norm_tens], ["max_norm_comp", max_norm_comp]]
         all_norm_fail.sort(key=itemgetter(1))
         
         # Deal with unfit individuals
         if failure_counter >= 1:
             if PRINT:
-                print "Total failed constraints:",failure_counter
-                print "Cumulative % difference between limit and failed constraints:",cum_difference, "% above limit"
-                print "Worst failed constriaint:",all_norm_fail[-1]
+                print "Total failed constraints:", failure_counter
+                print "Cumulative % difference between limit and failed "
+                print "constraints:", cum_difference, "% above limit"
+                print "Worst failed constriaint:", all_norm_fail[-1]
             if DEATH_PENALTY:
                 max_displacement = DEFAULT_FIT
                 total_weight = DEFAULT_FIT
                 total_cost = DEFAULT_FIT
-            # Assigns a fitness which is a multiple of the greatest normalised constraint violation (previously difference)
+            # Assigns a fitness which is a multiple of the greatest
+            # normalised constraint violation (previously difference)
             else:
-                if MAX_FAILURE == False:
-                    max_displacement = 100 * (cum_difference +1) * max_displacement
-                    total_weight = 100 * (cum_difference +1) * total_weight
-                    total_cost = 100 * (cum_difference +1) * total_cost
-                else:
-                    max_displacement = 100 * (max_failure[1] +1) * max_displacement
-                    total_weight = 100 * (max_failure[1] +1) * total_weight
-                    total_cost = 100 * (max_failure[1] +1) * total_cost
+                max_displacement = 100 * (cum_difference +1) * max_displacement
+                total_weight = 100 * (cum_difference +1) * total_weight
+                total_cost = 100 * (cum_difference +1) * total_cost
         
         # what if we have a fit individual?
         elif failure_counter == 0:
             self.good = True
         
         # Returns all fitness values
-        self.fitness_selections = [total_weight, "Self weight (kg)", max_displacement, "Maximum deflection (mm)", cum_difference, "Cumulative difference between limit and failed constraints:", total_cost, "the total estimated cost of construction of the structure"]
+        self.fitness_selections = [total_weight, "Self weight (kg)",
+            max_displacement, "Maximum deflection (mm)", cum_difference,
+            "Cumulative difference between limit and failed constraints:",
+            total_cost,
+            "the total estimated cost of construction of the structure"]
         final_fitnesses = []
         for i in Fitnesses:
             final_fitnesses.append(self.fitness_selections[i]) 
         return final_fitnesses, self.good
 
-    def test_mesh(self, Fitnesses, LOAD, DEBUG = False, FINAL = False, PRINT = False):
+    def test_mesh(self, Fitnesses, LOAD, DEBUG = False,
+                  FINAL = False, PRINT = False):
         """ calls all the functions in analyser"""
-        self.create_graph("time", self.program, self.genome_b, LOAD, Fitnesses, DEBUG)
+        self.create_graph("time", self.program,
+                          self.genome_b, LOAD, Fitnesses, DEBUG)
         self.apply_stresses(self.edge_list)
         self.create_slf_file(self.edge_list)
         self.test_slf_file()
         if SHOW_ANALYSIS:
             self.show_analysis()
         self.parse_results(self.edge_list)
-        if self.length_a != self.length_b: # can only occur if we're removing unstressed edges
+        if self.length_a != self.length_b:
+        # can only occur if we're removing unstressed edges
             self.apply_stresses(self.edge_list)
             self.create_slf_file(self.edge_list)
             self.test_slf_file()
@@ -781,20 +838,24 @@ class Analyser():
         if OPTIMIZE:
             if OPT_ALL:
                 if FINAL or PRINT:
-                    print "Optimizing...\nOriginal fitness:",answers[0],"\n"
-                answers = self.calculate_fitness(Fitnesses, self.run_optimization(STEPS, Fitnesses, answers, PRINT), PRINT)
+                    print "Optimizing...\nOriginal fitness:", answers[0], "\n"
+                answers = self.calculate_fitness(Fitnesses,
+                        self.run_optimization(STEPS, Fitnesses,
+                        answers, PRINT), PRINT)
                 if FINAL:
-                    print "Optimized fitness:",answers
+                    print "Optimized fitness:", answers
             elif answers[1]:
                 if FINAL or PRINT:
-                    print "Optimizing...\nOriginal fitness:",answers[0],"\n"
-                answers = self.calculate_fitness(Fitnesses, self.run_optimization(STEPS, Fitnesses, answers, PRINT), PRINT)
+                    print "Optimizing...\nOriginal fitness:", answers[0], "\n"
+                answers = self.calculate_fitness(Fitnesses,
+                        self.run_optimization(STEPS, Fitnesses,
+                        answers, PRINT), PRINT)
                 if FINAL or PRINT:
-                    print "Optimized fitness:",answers
+                    print "Optimized fitness:", answers
         self.delete_all_files()
         return answers
     
-    def run_graph(self, Fitnesses, LOAD, OPT, RE_GEN, show = False):
+    def run_graph(self, Fitnesses, OPT, RE_GEN, show = False):
         """ calls all the functions in analyser"""
         self.parse_graph()
         self.apply_stresses(self.edge_list)
@@ -804,11 +865,13 @@ class Analyser():
             self.show_analysis()
         self.parse_results(self.edge_list)
         answers = self.calculate_fitness(Fitnesses, self.edge_list)
-        if (OPT) and (not RE_GEN):
-            print "Optimizing...\nOriginal fitness:",answers[0],"\n"
-            print self.genome_b[:self.used_codons_b]
-            answers = self.calculate_fitness(Fitnesses, self.run_optimization(STEPS, Fitnesses, answers, PRINT = True))
-            print "Optimized fitness:",answers
+        if (OPT):
+            print "Optimizing...\nOriginal fitness:", answers[0]
+            print "___________________________________________\n"
+            answers = self.calculate_fitness(Fitnesses,
+                    self.run_optimization(STEPS,
+                    Fitnesses, answers, PRINT = True))
+            print "Optimized fitness:", answers
             if show:
                 self.show_analysis()
         self.delete_all_files()
@@ -816,8 +879,9 @@ class Analyser():
     
     def show_mesh(self, Fitnesses, LOAD, DEBUG = False):
         """generate and show mesh stresses using tspost"""
-        self.name = str(datetime.datetime.now())[-15:]
-        self.create_graph("time", self.program, self.genome_b, LOAD, Fitnesses, DEBUG)
+        self.name = str(datetime.now())[-15:]
+        self.create_graph("time", self.program, self.genome_b,
+                          LOAD, Fitnesses, DEBUG)
         self.apply_stresses(self.edge_list)
         self.create_slf_file(self.edge_list)
         self.test_slf_file()

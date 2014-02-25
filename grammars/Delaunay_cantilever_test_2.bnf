@@ -26,5 +26,5 @@
 <node_iter> ::= <node> | <node>,<node_iter>
 
 <make_all> ::= cross_brace(){}make_truss(){}truss_graph.replace_graph(truss_graph){}random.setstate(state){}
-<return> ::= return [truss_graph, len(edge_list), False, "cant", genome[:len(edge_list)]]{}
+<return> ::= return [truss_graph, len(edge_list), "cant"]{}
 <call> ::= XXXeval_or_exec_outputXXX = mutant()

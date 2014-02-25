@@ -134,7 +134,7 @@ class Grammar(object):
         output = "".join(output)
         values = {'genome_a': genome_a, 'genome_b': genome_b,
                  'phenotype': output, 'used_codons_a': used_input_a,
-                 'used_codons_b': used_input_b,}
+                 'used_codons_b': used_input_b}
         random.setstate(state)
         return (values)
 

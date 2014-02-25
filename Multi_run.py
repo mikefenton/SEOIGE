@@ -10,7 +10,8 @@ from operator import itemgetter
 from xlutils.copy import copy
 from xlrd import open_workbook, xldate_as_tuple
 
-def execute(RUNS, FITNESS, GRAMMAR, LOAD, GENERATIONS, OPT, RE_GEN, BEST_STOP, OPT_ALL, FOLDER):
+def execute(RUNS, FITNESS, GRAMMAR, LOAD, GENERATIONS, OPT, RE_GEN, BEST_STOP,
+            OPT_ALL, FOLDER):
     """execute multiple runs"""
     first_progs = []
     first_fits = []
@@ -117,11 +118,11 @@ def execute(RUNS, FITNESS, GRAMMAR, LOAD, GENERATIONS, OPT, RE_GEN, BEST_STOP, O
         os.remove("/home/michael/Dropbox/Collij/Mike/truss/EliteResults/" + str(answer))
 
 if __name__ == '__main__':
-    RUN_FOLDER = "Test 11 - Now properly analyzing trusses"
-#    execute(30, [0], "Delaunay_cantilever_test.bnf", 444800, 100, False, False, False, False, "Percentage Regular")
-#    execute(30, [0], "Delaunay_cantilever_test_2.bnf", 444800, 100, False, False, False, False, "Just Percentage")
-    execute(30, [0], "Delaunay_cantilever_test_3.bnf", 444800, 100, False, False, False, False, "Just The Right Solution")
-#    execute(30, [0], "Delaunay_cantilever.bnf", 444800, 100, False, False, False, False, "Random Task")
+    RUN_FOLDER = "Test 12 - Optimizer on"
+    execute(30, [0], "Delaunay_cantilever_test.bnf", 444800, 100, True, True, False, True, "Percentage Regular")
+    execute(30, [0], "Delaunay_cantilever_test_2.bnf", 444800, 100, True, True, False, True, "Just Percentage")
+    execute(30, [0], "Delaunay_cantilever_test_3.bnf", 444800, 100, True, True, False, True, "Just The Right Solution")
+    execute(30, [0], "Delaunay_cantilever.bnf", 444800, 100, True, True, False, True, "Random Task")
     
  #   execute(30, [0], "Delaunay_cantilever_test.bnf", 444800, 500, True, True, True, True, "Opt Re Best All")
  #   execute(30, [0], "Delaunay_cantilever.bnf", 444800, 500, True, True, True, False, "Opt Re Best Fit")
